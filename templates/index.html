@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>Interaktiv slätröntgen – webb</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            margin: 20px;
+            background: #0f172a;
+            color: #e5e7eb;
+        }
+
+        h1, h2 {
+            color: #f9fafb;
+        }
+
+        .layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+
+        .panel {
+            background: #111827;
+            padding: 16px;
+            border-radius: 10px;
+            box-shadow: 0 0 0 1px #1f2937;
+        }
+
+        .panel-controls {
+            flex: 1 1 280px;
+            max-width: 420px;
+        }
+
+        .panel-image {
+            flex: 0 0 auto;
+        }
+
+        .panel-metrics {
+            flex: 1 1 260px;
+            max-width: 380px;
+        }
+
+        .control-group {
+            margin-bottom: 14px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+        }
+
+        .value {
+            font-weight: 600;
+            margin-left: 6px;
+            color: #facc15;
+        }
+
+        .check-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .check-row label {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.9rem;
+        }
+
+        #image-container {
+            text-align: center;
+        }
+
+        #xrImage {
+            border: 1px solid #4b5563;
+            image-rendering: pixelated;
+            background: #000;
+        }
+
+        .metrics {
+            margin-top: 8px;
+        }
+
+        .metric-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 8px;
+        }
+
+        .metric-label {
+            width: 80px;
+            font-size: 0.85rem;
+        }
+
+        .metric-bar-bg {
+            flex: 1;
+            height: 14px;
+            background: #020617;
+            border-radius: 999px;
+            overflow: hidden;
+            box-shadow: inset 0 0 0 1px #1f2933;
+        }
+
+        .metric-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #22c55e, #eab308);
+            transition: width 0.12s linear;
+        }
+
+        .metric-value {
+            width: 40px;
+            text-align: right;
+            font-size: 0.8rem;
+            color: #d1d5db;
+        }
+
+        .help-text {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-top: 6px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Interaktiv slätröntgen – webbversion (BMA kurs) \Jaocb</h1>
+    <p class="help-text">
+        Justera reglagen för att se hur bildens brus, skärpa, kontrast och dos påverkas.
+        Bild och staplar uppdateras automatiskt.
+    </p>
+
+    <div class="layout">
+        <!-- KONTROLLER -->
+        <div class="panel panel-controls">
+            <h2>Exponeringsparametrar</h2>
+
+            <div class="control-group">
+                <label for="kv">
+                    Energi (kV)
+                    <span class="value" id="kv_val">120</span>
+                </label>
+                <input id="kv" type="range" min="40" max="150" value="120">
+            </div>
+
+            <div class="control-group">
+                <label for="mas">
+                    Rörström (mA)
+                    <span class="value" id="mas_val">2.0</span>
+                </label>
+                <input id="mas" type="range" min="0.3" max="8.0" step="0.1" value="2.0">
+            </div>
+
+            <div class="control-group">
+                <label for="exp_time">
+                    Exponeringstid (s)
+                    <span class="value" id="exp_time_val">1.0</span>
+                </label>
+                <input id="exp_time" type="range" min="1.0" max="5.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="control-group">
+                <label for="thickness">
+                    Tjocklek (cm)
+                    <span class="value" id="thickness_val">5.0</span>
+                </label>
+                <input id="thickness" type="range" min="3.0" max="13.0" step="0.1" value="5.0">
+            </div>
+
+            <div class="check-row">
+                <label>
+                    <input id="grid_on" type="checkbox">
+                    Raster på
+                </label>
+
+                <label>
+                    <input id="motion_on" type="checkbox">
+                    Rörelse under exponeringen
+                </label>
+            </div>
+
+            <p class="help-text">
+                • Högre mAs och tid ökar dosen men minskar brus.<br>
+                • Tjockare objekt ger mer spridd strålning och mer brus.<br>
+                • Raster minskar spridd strålning men ökar brus något (mindre signal).
+            </p>
+        </div>
+
+        <!-- BILD -->
+        <div class="panel panel-image">
+            <h2>Simulerad bild</h2>
+            <div id="image-container">
+                <img id="xrImage" src="" alt="Simulerad röntgenbild" width="320" height="320">
+            </div>
+        </div>
+
+        <!-- STAPLAR -->
+        <div class="panel panel-metrics">
+            <h2>Bildkvalitet & dos</h2>
+            <div class="metrics">
+                <div class="metric-row">
+                    <div class="metric-label">Skärpa</div>
+                    <div class="metric-bar-bg">
+                        <div id="bar_sharp" class="metric-bar-fill"></div>
+                    </div>
+                    <div id="bar_sharp_val" class="metric-value">0%</div>
+                </div>
+
+                <div class="metric-row">
+                    <div class="metric-label">Brus</div>
+                    <div class="metric-bar-bg">
+                        <div id="bar_noise" class="metric-bar-fill"></div>
+                    </div>
+                    <div id="bar_noise_val" class="metric-value">0%</div>
+                </div>
+
+                <div class="metric-row">
+                    <div class="metric-label">Kontrast</div>
+                    <div class="metric-bar-bg">
+                        <div id="bar_contrast" class="metric-bar-fill"></div>
+                    </div>
+                    <div id="bar_contrast_val" class="metric-value">0%</div>
+                </div>
+
+                <div class="metric-row">
+                    <div class="metric-label">Dos</div>
+                    <div class="metric-bar-bg">
+                        <div id="bar_dose" class="metric-bar-fill"></div>
+                    </div>
+                    <div id="bar_dose_val" class="metric-value">0%</div>
+                </div>
+            </div>
+
+            <p class="help-text">
+                Värdena är normaliserade 0–100&nbsp;% och bygger på samma modell som i din
+                ursprungliga interaktiva applikation.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const kvSlider = document.getElementById("kv");
+        const masSlider = document.getElementById("mas");
+        const expSlider = document.getElementById("exp_time");
+        const thkSlider = document.getElementById("thickness");
+        const gridCheckbox = document.getElementById("grid_on");
+        const motionCheckbox = document.getElementById("motion_on");
+
+        const kvVal = document.getElementById("kv_val");
+        const masVal = document.getElementById("mas_val");
+        const expVal = document.getElementById("exp_time_val");
+        const thkVal = document.getElementById("thickness_val");
+
+        const imgElem = document.getElementById("xrImage");
+
+        const barSharp     = document.getElementById("bar_sharp");
+        const barNoise     = document.getElementById("bar_noise");
+        const barContrast  = document.getElementById("bar_contrast");
+        const barDose      = document.getElementById("bar_dose");
+
+        const barSharpVal     = document.getElementById("bar_sharp_val");
+        const barNoiseVal     = document.getElementById("bar_noise_val");
+        const barContrastVal  = document.getElementById("bar_contrast_val");
+        const barDoseVal      = document.getElementById("bar_dose_val");
+
+        function updateLabels() {
+            kvVal.textContent = kvSlider.value;
+            masVal.textContent = masSlider.value;
+            expVal.textContent = expSlider.value;
+            thkVal.textContent = thkSlider.value;
+        }
+
+        function updateBars(metrics) {
+            if (!metrics) return;
+
+            function setBar(barElem, textElem, value) {
+                const v = Math.max(0, Math.min(1, value || 0));
+                const pct = Math.round(v * 100);
+                barElem.style.width = pct + "%";
+                textElem.textContent = pct + "%";
+            }
+
+            setBar(barSharp,    barSharpVal,    metrics.sharp);
+            setBar(barNoise,    barNoiseVal,    metrics.noise);
+            setBar(barContrast, barContrastVal, metrics.contrast);
+            setBar(barDose,     barDoseVal,     metrics.dose);
+        }
+
+        async function updateImage() {
+            updateLabels();
+
+            const payload = {
+                kv: parseInt(kvSlider.value),
+                mas: parseFloat(masSlider.value),
+                exp_time: parseFloat(expSlider.value),
+                thickness: parseFloat(thkSlider.value),
+                grid_on: gridCheckbox.checked,
+                motion_on: motionCheckbox.checked
+            };
+
+            try {
+                const response = await fetch("/api/image", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    console.error("Fel från servern:", response.status);
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (data.image_data) {
+                    imgElem.src = data.image_data;
+                }
+                if (data.metrics) {
+                    updateBars(data.metrics);
+                }
+            } catch (err) {
+                console.error("Något gick fel vid hämtning av bild:", err);
+            }
+        }
+
+        kvSlider.addEventListener("input", updateImage);
+        masSlider.addEventListener("input", updateImage);
+        expSlider.addEventListener("input", updateImage);
+        thkSlider.addEventListener("input", updateImage);
+        gridCheckbox.addEventListener("change", updateImage);
+        motionCheckbox.addEventListener("change", updateImage);
+
+        window.addEventListener("load", updateImage);
+    </script>
+</body>
+</html>
